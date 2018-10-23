@@ -69,10 +69,22 @@ module.exports = (port, host) => Promise.resolve()${this.compileBackendModuleImp
     }
 
     protected compileMain(backendModules: Map<string, string>): string {
+        const setElectronVersion = this.ifElectron(`
+// To be able to identify whether we are running in electron or not (is-electron), we need the electron version on the process.
+// For the forked Node.js processes, it is missing, so we have to set it explicitly.
+// https://github.com/theia-ide/theia/issues/3254#issuecomment-432206760
+if (process.versions && typeof process.versions.electron === 'undefined') {
+    const argv = process.argv.splice(2);
+    const index = argv.findIndex(arg => arg.startsWith('electron-version='));
+    if (index !== -1) {
+        process.versions.electron = argv[index].split('electron-version=').pop();
+    }
+}
+`);
         return `// @ts-check
 const { BackendApplicationConfigProvider } = require('@theia/core/lib/node/backend-application-config-provider');
 BackendApplicationConfigProvider.set(${this.prettyStringify(this.pck.props.backend.config)});
-
+${setElectronVersion}
 const serverPath = require('path').resolve(__dirname, 'server');
 const address = require('@theia/core/lib/node/cluster/main').default(serverPath);
 address.then(function (address) {

@@ -148,6 +148,7 @@ if (isMaster) {
     });
     app.on('ready', () => {
         // Check whether we are in bundled application or development mode.
+        // @ts-ignore
         const devMode = process.defaultApp || /node_modules[\/]electron[\/]/.test(process.execPath);
         const mainWindow = createNewWindow();
         const loadMainWindow = (port) => {
@@ -164,7 +165,13 @@ if (isMaster) {
                 app.exit(1);
             });
         } else {
-            const cp = fork(mainPath);
+            const appProjectPath = join(__dirname, '..', '..');
+            const argv = ['--app-project-path', appProjectPath];
+            const { versions } = process;
+            if (versions && typeof versions.electron !== 'undefined') {
+                argv.push('electron-version=' + versions.electron);
+            }
+            const cp = fork(mainPath, argv);
             cp.on('message', (message) => {
                 loadMainWindow(message);
             });
